@@ -46,15 +46,24 @@ jobs:
         cd flutter_app
         flutter analyze
         
-    - name: 构建APK
+    - name: 检查Android环境
       run: |
         cd flutter_app
-        flutter build apk --release --split-per-abi
+        flutter doctor -v
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        ls -la android/
         
-    - name: 构建通用APK
+    - name: 清理构建缓存
       run: |
         cd flutter_app
-        flutter build apk --release
+        flutter clean
+        flutter pub get
+        
+    - name: 构建APK（带详细日志）
+      run: |
+        cd flutter_app
+        flutter build apk --release --verbose
         
     - name: 检查构建结果
       run: |
@@ -64,57 +73,44 @@ jobs:
     - name: 重命名APK文件
       run: |
         cd flutter_app/build/app/outputs/flutter-apk/
-        # 重命名分平台APK
-        if [ -f "app-arm64-v8a-release.apk" ]; then
-          mv app-arm64-v8a-release.apk 信e通-arm64-v8a.apk
-        fi
-        if [ -f "app-armeabi-v7a-release.apk" ]; then
-          mv app-armeabi-v7a-release.apk 信e通-armeabi-v7a.apk
-        fi
-        if [ -f "app-x86_64-release.apk" ]; then
-          mv app-x86_64-release.apk 信e通-x86_64.apk
-        fi
         if [ -f "app-release.apk" ]; then
-          mv app-release.apk 信e通-通用版.apk
+          mv app-release.apk 信e通-v1.0.0.apk
+          echo "✅ APK文件重命名成功: 信e通-v1.0.0.apk"
+        else
+          echo "❌ 找不到app-release.apk文件"
+          ls -la
+          exit 1
         fi
-        ls -la
         
     - name: 上传APK构建产物
       uses: actions/upload-artifact@v4
       with:
         name: 信e通APK文件
-        path: |
-          flutter_app/build/app/outputs/flutter-apk/*.apk
+        path: flutter_app/build/app/outputs/flutter-apk/信e通-v1.0.0.apk
         retention-days: 30
         
     - name: 计算APK信息
       run: |
         cd flutter_app/build/app/outputs/flutter-apk/
-        echo "## 📱 APK构建完成" >> $GITHUB_STEP_SUMMARY
+        echo "## 📱 信e通APK构建成功！" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| 文件名 | 大小 | 适用设备 |" >> $GITHUB_STEP_SUMMARY
-        echo "|--------|------|----------|" >> $GITHUB_STEP_SUMMARY
+        echo "### 🎉 构建完成" >> $GITHUB_STEP_SUMMARY
         
-        for apk in *.apk; do
-          if [ -f "$apk" ]; then
-            size=$(ls -lh "$apk" | awk '{print $5}')
-            case "$apk" in
-              *arm64*) device="主流64位Android设备 (推荐)" ;;
-              *armeabi*) device="32位Android设备" ;;
-              *x86_64*) device="模拟器/x64设备" ;;
-              *通用版*) device="所有Android设备 (通用)" ;;
-              *) device="Android设备" ;;
-            esac
-            echo "| $apk | $size | $device |" >> $GITHUB_STEP_SUMMARY
-          fi
-        done
+        if [ -f "信e通-v1.0.0.apk" ]; then
+          size=$(ls -lh "信e通-v1.0.0.apk" | awk '{print $5}')
+          echo "- **文件名**: 信e通-v1.0.0.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- **文件大小**: $size" >> $GITHUB_STEP_SUMMARY
+          echo "- **适用设备**: Android 5.0+ (通用版本)" >> $GITHUB_STEP_SUMMARY
+          echo "- **应用名称**: 信e通" >> $GITHUB_STEP_SUMMARY
+          echo "- **包名**: com.citic.stock_trading_app" >> $GITHUB_STEP_SUMMARY
+        fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📋 安装说明" >> $GITHUB_STEP_SUMMARY
-        echo "1. 下载对应的APK文件" >> $GITHUB_STEP_SUMMARY
+        echo "1. 在Artifacts部分下载APK文件" >> $GITHUB_STEP_SUMMARY
         echo "2. 在Android设备上启用\"未知来源\"安装" >> $GITHUB_STEP_SUMMARY
-        echo "3. 安装APK文件" >> $GITHUB_STEP_SUMMARY
-        echo "4. 大多数设备推荐使用: **信e通-arm64-v8a.apk**" >> $GITHUB_STEP_SUMMARY
+        echo "3. 安装APK文件并授予权限" >> $GITHUB_STEP_SUMMARY
+        echo "4. 享受中信证券风格的股票交易体验！" >> $GITHUB_STEP_SUMMARY
         
     - name: 创建Release (仅在推送到main分支时)
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -132,9 +128,7 @@ jobs:
           - 安全的交易和资金管理
           
           ### 📱 APK下载
-          - **信e通-arm64-v8a.apk**: 推荐，适用于大多数现代Android设备
-          - **信e通-armeabi-v7a.apk**: 适用于较老的32位Android设备
-          - **信e通-通用版.apk**: 通用版本，适用于所有Android设备
+          - **信e通-v1.0.0.apk**: 通用版本，适用于所有Android 5.0+设备
           
           ### 📋 安装要求
           - Android 5.0 或更高版本
@@ -147,7 +141,7 @@ jobs:
           3. 点击APK文件进行安装
           4. 授予必要的权限
         files: |
-          flutter_app/build/app/outputs/flutter-apk/*.apk
+          flutter_app/build/app/outputs/flutter-apk/信e通-v1.0.0.apk
         draft: false
         prerelease: false
       env:
