@@ -1,0 +1,154 @@
+name: 构建信e通APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 设置Flutter环境
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.5'
+        channel: 'stable'
+        cache: true
+        
+    - name: 验证Flutter安装
+      run: |
+        flutter --version
+        flutter doctor -v
+        
+    - name: 进入Flutter项目目录
+      run: cd flutter_app
+      
+    - name: 获取Flutter依赖
+      run: |
+        cd flutter_app
+        flutter pub get
+        
+    - name: 分析代码质量
+      run: |
+        cd flutter_app
+        flutter analyze
+        
+    - name: 构建APK
+      run: |
+        cd flutter_app
+        flutter build apk --release --split-per-abi
+        
+    - name: 构建通用APK
+      run: |
+        cd flutter_app
+        flutter build apk --release
+        
+    - name: 检查构建结果
+      run: |
+        cd flutter_app
+        ls -la build/app/outputs/flutter-apk/
+        
+    - name: 重命名APK文件
+      run: |
+        cd flutter_app/build/app/outputs/flutter-apk/
+        # 重命名分平台APK
+        if [ -f "app-arm64-v8a-release.apk" ]; then
+          mv app-arm64-v8a-release.apk 信e通-arm64-v8a.apk
+        fi
+        if [ -f "app-armeabi-v7a-release.apk" ]; then
+          mv app-armeabi-v7a-release.apk 信e通-armeabi-v7a.apk
+        fi
+        if [ -f "app-x86_64-release.apk" ]; then
+          mv app-x86_64-release.apk 信e通-x86_64.apk
+        fi
+        if [ -f "app-release.apk" ]; then
+          mv app-release.apk 信e通-通用版.apk
+        fi
+        ls -la
+        
+    - name: 上传APK构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: 信e通APK文件
+        path: |
+          flutter_app/build/app/outputs/flutter-apk/*.apk
+        retention-days: 30
+        
+    - name: 计算APK信息
+      run: |
+        cd flutter_app/build/app/outputs/flutter-apk/
+        echo "## 📱 APK构建完成" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| 文件名 | 大小 | 适用设备 |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|------|----------|" >> $GITHUB_STEP_SUMMARY
+        
+        for apk in *.apk; do
+          if [ -f "$apk" ]; then
+            size=$(ls -lh "$apk" | awk '{print $5}')
+            case "$apk" in
+              *arm64*) device="主流64位Android设备 (推荐)" ;;
+              *armeabi*) device="32位Android设备" ;;
+              *x86_64*) device="模拟器/x64设备" ;;
+              *通用版*) device="所有Android设备 (通用)" ;;
+              *) device="Android设备" ;;
+            esac
+            echo "| $apk | $size | $device |" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 安装说明" >> $GITHUB_STEP_SUMMARY
+        echo "1. 下载对应的APK文件" >> $GITHUB_STEP_SUMMARY
+        echo "2. 在Android设备上启用\"未知来源\"安装" >> $GITHUB_STEP_SUMMARY
+        echo "3. 安装APK文件" >> $GITHUB_STEP_SUMMARY
+        echo "4. 大多数设备推荐使用: **信e通-arm64-v8a.apk**" >> $GITHUB_STEP_SUMMARY
+        
+    - name: 创建Release (仅在推送到main分支时)
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.${{ github.run_number }}
+        name: 信e通 v1.0.${{ github.run_number }}
+        body: |
+          ## 📱 信e通 - 中信证券股票交易APP
+          
+          ### 🚀 本次更新
+          - 完整的股票交易功能
+          - 中信证券官方UI设计
+          - 实时行情和K线图表
+          - 安全的交易和资金管理
+          
+          ### 📱 APK下载
+          - **信e通-arm64-v8a.apk**: 推荐，适用于大多数现代Android设备
+          - **信e通-armeabi-v7a.apk**: 适用于较老的32位Android设备
+          - **信e通-通用版.apk**: 通用版本，适用于所有Android设备
+          
+          ### 📋 安装要求
+          - Android 5.0 或更高版本
+          - 至少100MB可用存储空间
+          - 网络连接
+          
+          ### 🔧 安装步骤
+          1. 下载对应的APK文件
+          2. 在Android设备上启用"未知来源"应用安装
+          3. 点击APK文件进行安装
+          4. 授予必要的权限
+        files: |
+          flutter_app/build/app/outputs/flutter-apk/*.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
