@@ -2,9 +2,9 @@ name: 构建信e通APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, flutter-only ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, flutter-only ]
   workflow_dispatch:
 
 jobs:
