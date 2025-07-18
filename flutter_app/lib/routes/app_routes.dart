@@ -12,9 +12,6 @@ class AppRoutes {
   static const String main = '/main';
   static const String home = '/home';
   
-  // 股票搜索
-  static const String stockSearch = '/stock-search';
-  
   // 行情相关
   static const String market = '/market';
   static const String stockDetail = '/stock-detail';

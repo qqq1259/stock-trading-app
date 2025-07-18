@@ -65,8 +65,6 @@ flutter:
   # 资源文件
   assets:
     - assets/images/
-    - assets/icons/
-    - assets/data/
     
   # 字体
   # fonts:

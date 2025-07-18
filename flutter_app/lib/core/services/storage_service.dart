@@ -5,14 +5,7 @@ import '../constants/app_constants.dart';
 
 class StorageService {
   static late SharedPreferences _prefs;
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-    iOptions: IOSOptions(
-      accessibility: IOSAccessibility.first_unlock_this_device,
-    ),
-  );
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
   
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
