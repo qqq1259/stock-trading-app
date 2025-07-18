@@ -5,8 +5,8 @@ class AppConstants {
   static const String appVersion = '1.0.0';
   
   // API配置
-  static const String baseUrl = 'https://api.bzhxg.cc/';
-  static const String webSocketUrl = 'wss://api.bzhxg.cc/ws';
+  static const String baseUrl = 'https://api.hxcszy888.com/';
+  static const String webSocketUrl = 'wss://api.hxcszy888.com/ws';
   
   // 存储Key
   static const String userTokenKey = 'user_token';
